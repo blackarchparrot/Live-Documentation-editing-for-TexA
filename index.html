@@ -3,63 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TexA Documentation</title>
+  <title>TexA Documentation — Three Bugs</title>
   
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Quill Editor Core -->
+  <!-- Quill Editor -->
   <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 
   <style>
-    /* Mobile-optimized touch typing and cursor focus */
+    /* Splash Screen Animations */
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.08); }
+    }
+    .animate-glow {
+      animation: pulseGlow 3s ease-in-out infinite;
+    }
+    
+    .splash-fade-out {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.6s ease-out, visibility 0.6s ease-out;
+    }
+
+    /* Mobile Editor Styling */
     .ql-editor {
-      min-height: 500px;
-      font-size: 16px; /* Prevents auto-zoom on mobile */
+      min-height: 520px;
+      font-size: 16px;
       line-height: 1.6;
-      padding: 1.5rem;
+      padding: 1.25rem;
       -webkit-user-select: text;
       user-select: text;
     }
   </style>
 </head>
-<body class="bg-slate-100 flex flex-col min-h-screen text-slate-800">
+<body class="bg-slate-100 flex flex-col min-h-screen text-slate-800 font-sans">
 
-  <!-- Header -->
+  <!-- 1. WELCOME SPLASH ANIMATION OVERLAY -->
+  <div id="splashScreen" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 text-center select-none overflow-hidden">
+    <!-- Glowing background accent -->
+    <div class="absolute w-72 h-72 bg-indigo-600/30 rounded-full blur-3xl animate-glow pointer-events-none"></div>
+
+    <div class="relative z-10 max-w-sm w-full space-y-6">
+      <!-- Team Badge -->
+      <div class="inline-flex items-center space-x-2 bg-indigo-950/80 border border-indigo-500/30 px-3.5 py-1.5 rounded-full text-indigo-300 text-xs font-semibold tracking-wide uppercase shadow-lg">
+        <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+        <span>Team Three Bugs</span>
+      </div>
+
+      <!-- Project Branding -->
+      <div class="space-y-2">
+        <h1 class="text-4xl font-extrabold text-white tracking-tight">
+          Tex<span class="text-indigo-500">A</span>
+        </h1>
+        <p class="text-slate-400 text-xs uppercase tracking-widest font-medium">Textile AI Assistant Documentation</p>
+      </div>
+
+      <!-- Author Credit -->
+      <div class="pt-4 border-t border-slate-800/80">
+        <p class="text-slate-400 text-xs">Architected & Created by</p>
+        <p class="text-indigo-400 font-bold text-base tracking-wide mt-0.5">Black Parrot</p>
+      </div>
+
+      <!-- Enter / Launch Button -->
+      <button onclick="dismissSplash()" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl text-sm transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2">
+        <span>Enter Documentation</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+      </button>
+    </div>
+  </div>
+
+
+  <!-- 2. MAIN APP NAVIGATION -->
   <header class="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-50 flex items-center justify-between shadow-sm">
-    <div class="flex items-center space-x-2">
-      <span class="bg-indigo-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs">TexA</span>
-      <h1 class="font-bold text-slate-800 text-base">Documentation</h1>
+    <div class="flex items-center space-x-3">
+      <span class="bg-indigo-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs tracking-wider">TexA</span>
+      <div>
+        <h1 class="font-bold text-slate-800 text-sm leading-none">TexA Documentation</h1>
+        <p class="text-[10px] text-slate-400 mt-0.5">By Three Bugs • Black Parrot</p>
+      </div>
     </div>
 
     <div class="flex items-center space-x-2">
       <span id="status" class="text-xs text-slate-500 font-medium">Syncing...</span>
-      <button id="saveBtn" onclick="saveContent()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1 shadow-sm">
+      <button id="saveBtn" onclick="saveContent()" class="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 shadow-sm">
         Save
       </button>
     </div>
   </header>
 
-  <!-- Document Body -->
+
+  <!-- 3. MAIN EDITOR AREA -->
   <main class="flex-grow max-w-4xl w-full mx-auto p-2 sm:p-6">
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <!-- Rich Text Toolbar -->
+      <!-- Toolbar -->
       <div id="toolbar" class="border-b border-slate-200 bg-slate-50"></div>
-      <!-- Native Mobile-Editable Area -->
+      <!-- Native Mobile Rich Text Canvas -->
       <div id="editor"></div>
     </div>
   </main>
 
-  <script>
-    // Your pre-configured SheetDB API endpoint
-    const SHEETDB_URL = "https://sheetdb.io/api/v1/z973kwt0k8ow3";
 
+  <!-- 4. JAVASCRIPT ENGINE -->
+  <script>
+    const SHEETDB_URL = "https://sheetdb.io/api/v1/z973kwt0k8ow3";
     let quill;
 
+    // Dismiss welcome screen
+    function dismissSplash() {
+      const splash = document.getElementById("splashScreen");
+      splash.classList.add("splash-fade-out");
+      setTimeout(() => splash.remove(), 600);
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
-      // Initialize full mobile-friendly rich editor
+      // Initialize Rich Text Editor
       quill = new Quill('#editor', {
         theme: 'snow',
-        placeholder: 'Tap here to start editing...',
+        placeholder: 'Tap here to edit documentation...',
         modules: {
           toolbar: [
             [{ 'header': [1, 2, 3, false] }],
@@ -75,7 +137,7 @@
       loadContent();
     });
 
-    // 1. Fetch live document from database
+    // Fetch document from database
     async function loadContent() {
       const statusEl = document.getElementById("status");
       statusEl.innerText = "Loading...";
@@ -97,7 +159,7 @@
       }
     }
 
-    // 2. Save directly back to central database
+    // Save document to central database
     async function saveContent() {
       const saveBtn = document.getElementById("saveBtn");
       const statusEl = document.getElementById("status");
@@ -110,14 +172,12 @@
       const now = new Date().toISOString();
 
       try {
-        // Attempt direct patch
         let res = await fetch(`${SHEETDB_URL}/id/texa-doc`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: { content: htmlContent, last_updated: now } })
         });
 
-        // Fallback recreate if row was missing
         if (!res.ok) {
           await fetch(`${SHEETDB_URL}/id/texa-doc`, { method: 'DELETE' }).catch(() => {});
           res = await fetch(SHEETDB_URL, {
@@ -136,7 +196,7 @@
         }
       } catch (err) {
         console.error(err);
-        alert("Network error.");
+        alert("Network error while saving.");
         statusEl.innerText = "Save error";
       } finally {
         saveBtn.disabled = false;
