@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TexA Documentation</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Quill Editor Core -->
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
+  <style>
+    /* Mobile-optimized touch typing and cursor focus */
+    .ql-editor {
+      min-height: 500px;
+      font-size: 16px; /* Prevents auto-zoom on mobile */
+      line-height: 1.6;
+      padding: 1.5rem;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 flex flex-col min-h-screen text-slate-800">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-50 flex items-center justify-between shadow-sm">
+    <div class="flex items-center space-x-2">
+      <span class="bg-indigo-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs">TexA</span>
+      <h1 class="font-bold text-slate-800 text-base">Documentation</h1>
+    </div>
+
+    <div class="flex items-center space-x-2">
+      <span id="status" class="text-xs text-slate-500 font-medium">Syncing...</span>
+      <button id="saveBtn" onclick="saveContent()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1 shadow-sm">
+        Save
+      </button>
+    </div>
+  </header>
+
+  <!-- Document Body -->
+  <main class="flex-grow max-w-4xl w-full mx-auto p-2 sm:p-6">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <!-- Rich Text Toolbar -->
+      <div id="toolbar" class="border-b border-slate-200 bg-slate-50"></div>
+      <!-- Native Mobile-Editable Area -->
+      <div id="editor"></div>
+    </div>
+  </main>
+
+  <script>
+    // Your pre-configured SheetDB API endpoint
+    const SHEETDB_URL = "https://sheetdb.io/api/v1/z973kwt0k8ow3";
+
+    let quill;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Initialize full mobile-friendly rich editor
+      quill = new Quill('#editor', {
+        theme: 'snow',
+        placeholder: 'Tap here to start editing...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'color': [] }, { 'background': [] }],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'align': [] }],
+            ['clean']
+          ]
+        }
+      });
+
+      loadContent();
+    });
+
+    // 1. Fetch live document from database
+    async function loadContent() {
+      const statusEl = document.getElementById("status");
+      statusEl.innerText = "Loading...";
+
+      try {
+        const res = await fetch(`${SHEETDB_URL}/search?id=texa-doc`);
+        const data = await res.json();
+
+        if (data.length > 0 && data[0].content) {
+          quill.clipboard.dangerouslyPasteHTML(data[0].content);
+          const time = data[0].last_updated ? new Date(data[0].last_updated).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Recently';
+          statusEl.innerText = `Saved at ${time}`;
+        } else {
+          statusEl.innerText = "Ready";
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.innerText = "Sync failure";
+      }
+    }
+
+    // 2. Save directly back to central database
+    async function saveContent() {
+      const saveBtn = document.getElementById("saveBtn");
+      const statusEl = document.getElementById("status");
+
+      saveBtn.disabled = true;
+      saveBtn.innerText = "Saving...";
+      statusEl.innerText = "Saving changes...";
+
+      const htmlContent = quill.getSemanticHTML();
+      const now = new Date().toISOString();
+
+      try {
+        // Attempt direct patch
+        let res = await fetch(`${SHEETDB_URL}/id/texa-doc`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: { content: htmlContent, last_updated: now } })
+        });
+
+        // Fallback recreate if row was missing
+        if (!res.ok) {
+          await fetch(`${SHEETDB_URL}/id/texa-doc`, { method: 'DELETE' }).catch(() => {});
+          res = await fetch(SHEETDB_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: [{ id: "texa-doc", content: htmlContent, last_updated: now }] })
+          });
+        }
+
+        if (res.ok) {
+          const time = new Date(now).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+          statusEl.innerText = `Saved at ${time}`;
+        } else {
+          alert("Save failed. Please try again.");
+          statusEl.innerText = "Save error";
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Network error.");
+        statusEl.innerText = "Save error";
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save";
+      }
+    }
+  </script>
+</body>
+</html>
